@@ -177,7 +177,51 @@ def start_game():
             BOARD = update_board();
             draw_game_state()
 
-start_game()
+#Networking stuff goes here
+import socket
+import threading
 
+def get_ip_address():
+    #Gets ip address of the machine running the server by asking Google DNS. Man, what can't Google do these days?
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    res = s.getsockname()[0]
+    s.close()
+    return res
+
+def get_free_port():
+    #Generates a random available port to use.
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    addr, port = s.getsockname()
+    s.close()
+    return port
+
+def start_server():
+    HOST = get_ip_address()
+    PORT = get_free_port();
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #Restart the TCP server to allow binding to the ports
+    server.bind((HOST, PORT))
+
+    print("Starting server at IP {0} on port {1}".format(HOST, PORT))
+
+    server.listen(100)
+    clients = []
+    numClients = 0
+
+    while numClients < 2:
+        conn, addr = server.accept();
+        clients.append(conn);
+
+        print(addr[0] + " connected")
+        numClients += 1;
+
+    start_game();
+
+# start_game()
+
+start_server();
 
     
