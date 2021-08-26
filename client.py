@@ -1,8 +1,7 @@
 #!/usr/bin/env python3 
 
-# Python program to implement client side of chat room.
+# Python program to implement client side 
 import socket
-import select
 import sys
 import threading
 
@@ -20,7 +19,7 @@ def valid_ip(address):
 def valid_port(port):
     return port > 1024 and port < 65536
 
-print("Welcome to Chat App!!!")
+print("Welcome to the Arena!!!")
 while(True):
     try:
         host = input("Enter host IP address: ")
@@ -42,7 +41,6 @@ def send_msg():
     while True:
         message = sys.stdin.readline()
         server.send(message.encode("utf-8"))
-        sys.stdout.write("<You>  ")
         sys.stdout.write(message)
         sys.stdout.flush()
 def recv_msg():
