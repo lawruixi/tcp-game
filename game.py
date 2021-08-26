@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+import time
+
 def intro():
     print("=============================================================")
     print("Welcome to the Best PvP Game ever invented, the Arena!!!!!!")
@@ -174,13 +177,14 @@ def start_game(usernames):
     BOARD = update_board();
     draw_game_state(); 
 
+    turn = 1
     while(not player1.is_dead() and not player2.is_dead()): #TODO: while both players not dead 
         actions_list = get_all_player_inputs("Input actions: ", action_constraint); #TODO: Split into two different lists and handle turn order and stuff
         actions_list_by_turn = list(zip(actions_list[0].split(" "), actions_list[1].split(" ")))
         print(actions_list_by_turn);
 
-        output_string = ""
         for i in actions_list_by_turn:
+            output_string = ""
             if(is_attack(i[1])):
                 #If player 2 is attacking, player 1 always goes first (even if player1 is attacking. It makes no difference in this case.)
                 output_string += player1.action(i[0]) + "\n";
@@ -191,13 +195,19 @@ def start_game(usernames):
                 output_string += player1.action(i[0]) + "\n";
             else:
                 #Otherwise 1 then 2.
-                print("HELLO WORLD!")
-                print(i)
                 output_string += player1.action(i[0]) + "\n";
                 output_string += player2.action(i[1]) + "\n";
 
-        broadcast(output_string);
-        broadcast("\n" * 3)
+            broadcast(("=" * 45) + "\n" + (" " * 19) + "TURN {0}".format(turn) + (" " * 19) + "\n" + ("=" * 45))
+            BOARD = update_board()
+            draw_game_state();
+
+            broadcast(output_string);
+            broadcast("\n")
+
+            time.sleep(1)
+
+            turn += 1;
 
         if(player1.is_dead() and player2.is_dead()):
             broadcast("Draw!")
