@@ -87,16 +87,18 @@ def attack_square(damage, posX, posY):
         return
 
 def draw_health():
+    output_string = "";
     for player in PLAYERS:
-        print(player.name)
+        output_string += player.name + ": "
         health = player.health
 
-        print("Health: [", end='')
+        output_string += "Health: ["
         health_frac = int(health / MAXHEALTH * 20)
 
-        print("=" * health_frac, end='')
-        print("-" * (20 - health_frac), end='')
-        print("] {0}/100".format(health))
+        output_string += "=" * health_frac
+        output_string += "-" * (20 - health_frac)
+        output_string += "] {0}/100\n".format(health)
+    broadcast(output_string)
 
 def update_board():
     BOARD = [[None for i in range(SIZE)] for j in range(SIZE)]
@@ -105,16 +107,18 @@ def update_board():
     return BOARD;
 
 def draw_game_state():
+    output_string = ""
     for i in BOARD:
-        print("-" * (5*SIZE + 1))
-        print("|", end='')
+        output_string += ("-" * (5*SIZE + 1)) + "\n"
+        output_string += "|"
         for j in i:
             if j is None:
-                print("    |", end='')
+                output_string += "    |"
             elif isinstance(j, Player):
-                print(" {0} |".format(j.name), end='')
-        print()
-    print("-" * (5*SIZE + 1))
+                output_string += " {0} |".format(j.name)
+        output_string += "\n"
+    output_string += "-" * (5*SIZE + 1)
+    broadcast(output_string)
 
     draw_health();
 
@@ -134,34 +138,14 @@ def is_action(string):
             } 
     return actions_dict.get(string, False);
 
-def get_actions():
-    print("Input actions:")
 
-    valid = False
-    while(not valid):
-        actions_string = input().lower();
-        actions_list = actions_string.split(" ")
-
-        if(len(actions_list) != 3):
-            print("Input three actions.")
-            continue
-
-        for i in actions_list:
-            if(not is_action(i)):
-                print("Invalid action.")
-                break
-
-        valid = True;
-
-    return actions_list
-
-def start_game():
+def start_game(usernames):
     global BOARD
     BOARD = [["  " for i in range(SIZE)] for j in range(SIZE)]
 
     #Initialize player
-    player1 = Player("P1", 100, 0, SIZE//2);
-    player2 = Player("P2", 100, SIZE - 1, SIZE//2);
+    player1 = Player(usernames[0][:2].upper(), 100, 0, SIZE//2);
+    player2 = Player(usernames[1][:2].upper(), 100, SIZE - 1, SIZE//2);
 
     PLAYERS.append(player1)
     PLAYERS.append(player2)
@@ -170,7 +154,9 @@ def start_game():
     draw_game_state(); 
 
     while(True): #TODO: while both players not dead 
-        actions_list = get_actions();
+        actions_list = get_all_player_inputs("Input actions: "); #TODO: Split into two different lists and handle turn order and stuff
+        print("HELLO WORLD!")
+        print(actions_list);
         for i in actions_list:
             player1.action(i)
 
@@ -195,13 +181,52 @@ def get_input(client):
     except Exception as e:
         print(e)
 
-def broadcast(message, connection):
+def get_action_input(client):
+    valid = False
+    while(not valid):
+        actions_string = get_input(client);
+        actions_list = actions_string.split(" ")
+
+        if(len(actions_list) != 3):
+            send("Input three actions.", client[0])
+            continue
+
+        for i in actions_list:
+            if(not is_action(i)):
+                send("Invalid action.", client[0])
+                break
+
+        valid = True;
+    return actions_list
+
+def get_all_player_inputs(message):
+    #Sends a message, then tries to get all player inputs, blocking until it does.
+    broadcast(message);
+    
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_input, client) for client in CLIENTS];
+    return [f.result().strip() for f in futures]
+
+
+def send(message, connection):
+    #Sends a message to a specific connection.
+    for client in CLIENTS:
+        if client[0] == connection:
+            try:
+                client[0].send(message.encode('utf-8'))
+                print(message);
+            except:
+                client[0].close()
+                remove_connection(client);
+
+
+def broadcast(message, connection = None):
     #Broadcasts a message to all clients that are connected, except for the connection sending the message.
+    print(message);
     for client in CLIENTS:
         if client[0] != connection:
             try:
                 client[0].send(message.encode('utf-8'))
-                print(message);
             except:
                 client[0].close()
 
@@ -213,15 +238,7 @@ def remove_connection(connection):
     for client in CLIENTS:
         if client[0] == connection:
             CLIENTS.remove(client);
-            broadcast("{0} disconnected.".format(client[1]), None)
-
-def get_player_names():
-    broadcast("Enter username: ", None);
-    
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(get_input, client) for client in CLIENTS];
-    print([f.result() for f in futures])
-
+            broadcast("{0} disconnected.".format(client[1]))
 
 def get_ip_address():
     #Gets ip address of the machine running the server by asking Google DNS. Man, what can't Google do these days?
@@ -259,8 +276,8 @@ def start_server():
         print(addr[0] + " connected")
         numClients += 1;
 
-    get_player_names();
-    start_game();
+    usernames = get_all_player_inputs("Enter username: ")
+    start_game(usernames);
 
 # start_game()
 
