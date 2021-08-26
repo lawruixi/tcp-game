@@ -179,7 +179,49 @@ def start_game():
 
 #Networking stuff goes here
 import socket
-import threading
+import concurrent.futures
+
+CLIENTS = []
+
+def get_input(client):
+    conn, addr = client;
+    #Gets input from a specific connection and address.
+    try:
+        message = conn.recv(2048);
+        if message:
+            message_str = message.decode("utf-8")
+            print("<" + addr[0] + ">: {0}".format(message_str));
+            return message_str;
+    except Exception as e:
+        print(e)
+
+def broadcast(message, connection):
+    #Broadcasts a message to all clients that are connected, except for the connection sending the message.
+    for client in CLIENTS:
+        if client[0] != connection:
+            try:
+                client[0].send(message.encode('utf-8'))
+                print(message);
+            except:
+                client[0].close()
+
+                # if the link is broken, we remove the client
+                remove_connection(client)
+
+def remove_connection(connection):
+    #Remove a connection from the clients[] array.
+    for client in CLIENTS:
+        if client[0] == connection:
+            CLIENTS.remove(client);
+            broadcast("{0} disconnected.".format(client[1]), None)
+
+def get_player_names():
+    broadcast("Enter username: ", None);
+    
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_input, client) for client in CLIENTS];
+    print([f.result() for f in futures])
+
 
 def get_ip_address():
     #Gets ip address of the machine running the server by asking Google DNS. Man, what can't Google do these days?
@@ -207,17 +249,17 @@ def start_server():
 
     print("Starting server at IP {0} on port {1}".format(HOST, PORT))
 
-    server.listen(100)
-    clients = []
+    server.listen(2)
     numClients = 0
 
     while numClients < 2:
         conn, addr = server.accept();
-        clients.append(conn);
+        CLIENTS.append((conn, addr));
 
         print(addr[0] + " connected")
         numClients += 1;
 
+    get_player_names();
     start_game();
 
 # start_game()
