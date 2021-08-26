@@ -26,42 +26,56 @@ class Player:
             "dw": True,
             }
         if(action in move_dict):
-            self.move(action); 
+            return self.move(action); 
         if(action in attack_dict):
-            self.attack(action);
+            return self.attack(action);
 
     def move(self, direction):
+        direction_string = "" #Commentary purposes
+
         if(direction == "l"):
             if(self.posX > 0):
                 self.posX -= 1;
+                direction_string = "left"
         elif(direction == "r"):
             if(self.posX < SIZE - 1):
                 self.posX += 1;
+                direction_string = "right"
         elif(direction == "u"):
             if(self.posY > 0):
                 self.posY -= 1
+                direction_string = "up"
         elif(direction == "d"):
             if(self.posY < SIZE - 1):
                 self.posY += 1;
-        return (self.posX, self.posY);
+                direction_string = "down"
+        return "{0} moves {1}!".format(self.name, direction_string);
 
     def attack(self, attack):
+        attack_string = "" #Commentary purposes
+
         if(attack == "lw"):
             attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
             attack_square(WIDE_DAMAGE, self.posX - 1, self.posY);
             attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
+            attack_string = "left wide attack"
         elif(attack == "rw"):
             attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
             attack_square(WIDE_DAMAGE, self.posX + 1, self.posY);
             attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
+            attack_string = "right wide attack"
         elif(attack == "uw"):
             attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
             attack_square(WIDE_DAMAGE, self.posX, self.posY - 1);
             attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
+            attack_string = "up wide attack"
         elif(attack == "dw"):
             attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
             attack_square(WIDE_DAMAGE, self.posX, self.posY + 1);
             attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
+            attack_string = "down wide attack"
+
+        return "{0} uses {1}!".format(self.name, attack_string);
 
     def damage(self, damage):
         self.health -= damage;
@@ -76,7 +90,7 @@ MAXHEALTH = 100
 PLAYERS = []
 BOARD = [[]]
 
-WIDE_DAMAGE = 25
+WIDE_DAMAGE = 15
 
 def attack_square(damage, posX, posY):
     if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
@@ -123,20 +137,27 @@ def draw_game_state():
     draw_health();
 
 def is_action(string):
-    #Valid actions:
-    #L, U, R, D for movement
-    #
-    actions_dict = {
+    return is_movement(string) or is_attack(string);
+
+def is_movement(string):
+    movement_dict = {
             "l": True,
             "r": True,
             "u": True, 
             "d": True,
+            } 
+    return movement_dict.get(string, False);
+
+def is_attack(string):
+    #Valid attacks: 
+    #LW, RW, UW, DW for the wide attacks
+    attack_dict = {
             "lw": True,
             "rw": True,
             "uw": True, 
-            "dw": True
+            "dw": True,
             } 
-    return actions_dict.get(string, False);
+    return attack_dict.get(string, False);
 
 
 def start_game(usernames):
@@ -153,15 +174,37 @@ def start_game(usernames):
     BOARD = update_board();
     draw_game_state(); 
 
-    while(True): #TODO: while both players not dead 
-        actions_list = get_all_player_inputs("Input actions: "); #TODO: Split into two different lists and handle turn order and stuff
-        print("HELLO WORLD!")
-        print(actions_list);
-        for i in actions_list:
-            player1.action(i)
+    while(not player1.is_dead() and not player2.is_dead()): #TODO: while both players not dead 
+        actions_list = get_all_player_inputs("Input actions: ", action_constraint); #TODO: Split into two different lists and handle turn order and stuff
+        actions_list_by_turn = list(zip(actions_list[0].split(" "), actions_list[1].split(" ")))
+        print(actions_list_by_turn);
 
-            BOARD = update_board();
-            draw_game_state()
+        output_string = ""
+        for i in actions_list_by_turn:
+            if(is_attack(i[1])):
+                #If player 2 is attacking, player 1 always goes first (even if player1 is attacking. It makes no difference in this case.)
+                output_string += player1.action(i[0]) + "\n";
+                output_string += player2.action(i[1]) + "\n";
+            elif(is_attack(i[0])):
+                #Likewise, if player 1 is attacking, player 2 goes first.
+                output_string += player2.action(i[1]) + "\n";
+                output_string += player1.action(i[0]) + "\n";
+            else:
+                #Otherwise 1 then 2.
+                print("HELLO WORLD!")
+                print(i)
+                output_string += player1.action(i[0]) + "\n";
+                output_string += player2.action(i[1]) + "\n";
+
+        broadcast(output_string);
+        broadcast("\n" * 3)
+
+        if(player1.is_dead() and player2.is_dead()):
+            broadcast("Draw!")
+        elif(player1.is_dead()):
+            broadcast("Player 2 Wins!")
+        elif(player2.is_dead()):
+            broadcast("Player 1 Wins!");
 
 #Networking stuff goes here
 import socket
@@ -169,44 +212,46 @@ import concurrent.futures
 
 CLIENTS = []
 
-def get_input(client):
+def get_input(client, constraint = None):
     conn, addr = client;
     #Gets input from a specific connection and address.
     try:
         message = conn.recv(2048);
+        message_str = message.decode("utf-8")
         if message:
-            message_str = message.decode("utf-8")
+            print("HELLO")
+            if(constraint):
+                print("WORLD")
+                while(constraint(message_str) == False):
+                    print("HHHEHHEEH")
+                    send("Invalid input.\n", client[0]);
+
+                    message = conn.recv(2048);
+                    message_str = message.decode("utf-8")
             print("<" + addr[0] + ">: {0}".format(message_str));
             return message_str;
     except Exception as e:
         print(e)
 
-def get_action_input(client):
-    valid = False
-    while(not valid):
-        actions_string = get_input(client);
-        actions_list = actions_string.split(" ")
+def action_constraint(string):
+    actions_list = string.strip().split(" ")
+    print(actions_list)
 
-        if(len(actions_list) != 3):
-            send("Input three actions.", client[0])
-            continue
+    if(len(actions_list) != 3):
+        return False
 
-        for i in actions_list:
-            if(not is_action(i)):
-                send("Invalid action.", client[0])
-                break
+    for i in actions_list:
+        if(not is_action(i)):
+            return False
+    return True
 
-        valid = True;
-    return actions_list
-
-def get_all_player_inputs(message):
+def get_all_player_inputs(message, constraint = None):
     #Sends a message, then tries to get all player inputs, blocking until it does.
     broadcast(message);
     
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(get_input, client) for client in CLIENTS];
+        futures = [executor.submit(get_input, client, constraint) for client in CLIENTS];
     return [f.result().strip() for f in futures]
-
 
 def send(message, connection):
     #Sends a message to a specific connection.
