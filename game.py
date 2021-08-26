@@ -134,7 +134,7 @@ def draw_game_state():
             elif isinstance(j, Player):
                 output_string += " {0} |".format(j.name)
         output_string += "\n"
-    output_string += "-" * (5*SIZE + 1)
+    output_string += "-" * (5*SIZE + 1) + "\n"
     broadcast(output_string)
 
     draw_health();

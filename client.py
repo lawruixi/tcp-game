@@ -41,6 +41,7 @@ def send_msg():
     while True:
         message = sys.stdin.readline()
         server.send(message.encode("utf-8"))
+        sys.stdout.write("<You> ")
         sys.stdout.write(message)
         sys.stdout.flush()
 def recv_msg():
