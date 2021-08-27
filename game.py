@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import time
+import random
 
 def intro():
     print("=============================================================")
@@ -46,16 +47,32 @@ class Player:
         if(direction == ""):
             return "{0} doesn't move.".format(self.name);
         if(direction == "l"):
-            self.posX = max(self.posX - 2, 0);
+            for i in range(2, 0, -1):
+                #find the furthest possible square that is dashable to.
+                if(not is_passable(self.posX - i, self.posY)):
+                    continue
+                self.posX -= i;
             direction_string = "left"
         elif(direction == "r"):
-            self.posX = min(self.posX + 2, SIZE - 1);
+            for i in range(2, 0, -1):
+                #find the furthest possible square that is dashable to.
+                if(not is_passable(self.posX + i, self.posY)):
+                    continue
+                self.posX += i;
             direction_string = "right"
         elif(direction == "u"):
-            self.posY = max(self.posY - 2, 0);
+            for i in range(2, 0, -1):
+                #find the furthest possible square that is dashable to.
+                if(not is_passable(self.posX, self.posY - i)):
+                    continue
+                self.posY -= i;
             direction_string = "up"
         elif(direction == "d"):
-            self.posY = max(self.posY + 2, SIZE - 1);
+            for i in range(2, 0, -1):
+                #find the furthest possible square that is dashable to.
+                if(not is_passable(self.posX, self.posY + i)):
+                    continue
+                self.posY += i;
             direction_string = "down"
         return "{0} dashes {1}!".format(self.name, direction_string);
 
@@ -63,19 +80,19 @@ class Player:
         direction_string = "" #Commentary purposes
 
         if(direction == "l"):
-            if(self.posX > 0):
+            if(is_passable(self.posX - 1, self.posY)):
                 self.posX -= 1;
             direction_string = "left"
         elif(direction == "r"):
-            if(self.posX < SIZE - 1):
+            if(is_passable(self.posX + 1, self.posY)):
                 self.posX += 1;
             direction_string = "right"
         elif(direction == "u"):
-            if(self.posY > 0):
+            if(is_passable(self.posX, self.posY - 1)):
                 self.posY -= 1
             direction_string = "up"
         elif(direction == "d"):
-            if(self.posY < SIZE - 1):
+            if(is_passable(self.posX, self.posY + 1)):
                 self.posY += 1;
             direction_string = "down"
         self.last_moved = direction;
@@ -115,12 +132,48 @@ class Player:
     def is_dead(self):
         return self.health <= 0
 
-SIZE = 5
+class Obstacle:
+    def __init__(self, posX, posY):
+        self.posX = posX;
+        self.posY = posY;
+
+SIZE = 7
 MAXHEALTH = 100
 PLAYERS = []
 BOARD = [[]]
+NUM_OBSTACLES = SIZE
+OBSTACLES = []
 
 WIDE_DAMAGE = 15
+
+def generate_obstacles():
+    for i in range(NUM_OBSTACLES):
+        random_posX = random.randrange(SIZE);
+        random_posY = random.randrange(SIZE);
+        while(not BOARD[random_posY][random_posX] is None):
+            #If there is no obstacle or player there already
+            random_posX = random.randrange(SIZE);
+            random_posY = random.randrange(SIZE);
+
+        obstacle = Obstacle(random_posX, random_posY);
+        OBSTACLES.append(obstacle);
+        BOARD[random_posY][random_posX] = obstacle;
+
+def get_board_square(posX, posY):
+    return BOARD[posY][posX];
+
+def is_obstacle(posX, posY):
+    return isinstance(get_board_square(posX, posY), Obstacle);
+
+def is_player(posX, posY):
+    return isinstance(get_board_square(posX, posY), Player);
+
+def is_passable(posX, posY):
+    if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
+        return False
+    if(is_obstacle(posX, posY)):
+        return False
+    return True
 
 def attack_square(damage, posX, posY):
     if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
@@ -147,12 +200,15 @@ def draw_health():
 def update_board():
     global BOARD
     BOARD = [[None for i in range(SIZE)] for j in range(SIZE)]
+    for obstacle in OBSTACLES:
+        BOARD[obstacle.posY][obstacle.posX] = obstacle;
     for player in PLAYERS:
-        if(isinstance(BOARD[player.posY][player.posX], Player)):
+        if(is_player(player.posX, player.posY)):
             #Another player is already standing there
             BOARD[player.posY][player.posX] = "**";
         else:
             BOARD[player.posY][player.posX] = player;
+
     return BOARD;
 
 def draw_game_state():
@@ -165,6 +221,8 @@ def draw_game_state():
                 output_string += "    |"
             elif j == "**":
                 output_string += " ** |"
+            elif isinstance(j, Obstacle):
+                output_string += " // |"
             elif isinstance(j, Player):
                 output_string += " {0} |".format(j.name)
         output_string += "\n"
@@ -212,6 +270,7 @@ def start_game(usernames):
     PLAYERS.append(player2)
 
     update_board();
+    generate_obstacles();
     draw_game_state(); 
 
     turn = 1
@@ -222,7 +281,7 @@ def start_game(usernames):
 
         for i in actions_list_by_turn:
             output_string = ""
-            print("HELLO WORLD: ", i)
+            print(actions_list_by_turn)
             if(is_attack(i[1])):
                 #If player 2 is attacking, player 1 always goes first (even if player1 is attacking. It makes no difference in this case.)
                 output_string += player1.action(i[0]) + "\n";
