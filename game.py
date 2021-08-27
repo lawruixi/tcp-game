@@ -148,7 +148,11 @@ def update_board():
     global BOARD
     BOARD = [[None for i in range(SIZE)] for j in range(SIZE)]
     for player in PLAYERS:
-        BOARD[player.posY][player.posX] = player;
+        if(isinstance(BOARD[player.posY][player.posX], Player)):
+            #Another player is already standing there
+            BOARD[player.posY][player.posX] = "**";
+        else:
+            BOARD[player.posY][player.posX] = player;
     return BOARD;
 
 def draw_game_state():
@@ -159,6 +163,8 @@ def draw_game_state():
         for j in i:
             if j is None:
                 output_string += "    |"
+            elif j == "**":
+                output_string += " ** |"
             elif isinstance(j, Player):
                 output_string += " {0} |".format(j.name)
         output_string += "\n"
