@@ -4,7 +4,6 @@
 import socket
 import sys
 import threading
-
 def valid_ip(address):
     l = address.split(".")
     if(len(l) != 4): return False
@@ -22,9 +21,15 @@ def valid_port(port):
 print("Welcome to the Arena!!!")
 while(True):
     try:
-        host = input("Enter host IP address: ")
-        port = int(input("Enter port number (1024-65535): "))
+        host = input("Enter host IP address: ").strip()
+        port = int(input("Enter port number (1024-65535): ").strip())
+        print("HOST: " + host)
+        print("PORT: " + str(port))
+        if(host == "" or port == ""):
+            print("Connection cancelled.")
+            sys.exit(0)
         if(not valid_ip(host) or not valid_port(port)):
+            print("Invalid IP address / port number.")
             continue
         break
     except: 

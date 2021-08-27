@@ -15,6 +15,8 @@ class Player:
         self.posX = posX
         self.posY = posY
 
+        self.last_moved = "";
+
     def action(self, action):
         move_dict = {
             "l": True,
@@ -28,6 +30,9 @@ class Player:
             "uw": True,
             "dw": True,
             }
+        #Dash
+        if(action == "x"):
+            result = self.dash(self.last_moved);
         if(action in move_dict):
             result = self.move(action); 
         elif(action in attack_dict):
@@ -35,25 +40,45 @@ class Player:
         update_board();
         return result;
 
+    def dash(self, direction):
+        direction_string = ""
+
+        if(direction == ""):
+            return "{0} doesn't move.".format(self.name);
+        if(direction == "l"):
+            self.posX = max(self.posX - 2, 0);
+            direction_string = "left"
+        elif(direction == "r"):
+            self.posX = min(self.posX + 2, SIZE - 1);
+            direction_string = "right"
+        elif(direction == "u"):
+            self.posY = max(self.posY - 2, 0);
+            direction_string = "up"
+        elif(direction == "d"):
+            self.posY = max(self.posY + 2, SIZE - 1);
+            direction_string = "down"
+        return "{0} dashes {1}!".format(self.name, direction_string);
+
     def move(self, direction):
         direction_string = "" #Commentary purposes
 
         if(direction == "l"):
             if(self.posX > 0):
                 self.posX -= 1;
-                direction_string = "left"
+            direction_string = "left"
         elif(direction == "r"):
             if(self.posX < SIZE - 1):
                 self.posX += 1;
-                direction_string = "right"
+            direction_string = "right"
         elif(direction == "u"):
             if(self.posY > 0):
                 self.posY -= 1
-                direction_string = "up"
+            direction_string = "up"
         elif(direction == "d"):
             if(self.posY < SIZE - 1):
                 self.posY += 1;
-                direction_string = "down"
+            direction_string = "down"
+        self.last_moved = direction;
         return "{0} moves {1}!".format(self.name, direction_string);
 
     def attack(self, attack):
@@ -143,7 +168,10 @@ def draw_game_state():
     draw_health();
 
 def is_action(string):
-    return is_movement(string) or is_attack(string);
+    return is_dash(string) or is_movement(string) or is_attack(string);
+
+def is_dash(string):
+    return string == "x";
 
 def is_movement(string):
     movement_dict = {
@@ -216,9 +244,9 @@ def start_game(usernames):
         if(player1.is_dead() and player2.is_dead()):
             broadcast("Draw!")
         elif(player1.is_dead()):
-            broadcast("Player 2 Wins!")
+            broadcast("{0} Wins!".format(player2.name))
         elif(player2.is_dead()):
-            broadcast("Player 1 Wins!");
+            broadcast("{0} Wins!".format(player1.name))
 
 #Networking stuff goes here
 import socket
@@ -233,11 +261,8 @@ def get_input(client, constraint = None):
         message = conn.recv(2048);
         message_str = message.decode("utf-8")
         if message:
-            print("HELLO")
             if(constraint):
-                print("WORLD")
                 while(constraint(message_str) == False):
-                    print("HHHEHHEEH")
                     send("Invalid input.\n", client[0]);
 
                     message = conn.recv(2048);
@@ -257,6 +282,14 @@ def action_constraint(string):
     for i in actions_list:
         if(not is_action(i)):
             return False
+
+    #1 attack per round
+    numAttacks = 0
+    for i in actions_list:
+        if(is_attack(i)):
+            numAttacks += 1
+    if(numAttacks > 1): return False
+
     return True
 
 def get_all_player_inputs(message, constraint = None):
