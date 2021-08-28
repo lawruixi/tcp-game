@@ -39,7 +39,6 @@ class Player:
             result = self.move(action); 
         elif(action in attack_dict):
             result = self.attack(action);
-        update_board();
         return result;
 
     def dash(self, direction):
@@ -50,28 +49,28 @@ class Player:
         if(direction == "l"):
             for i in range(2, 0, -1):
                 #find the furthest possible square that is dashable to.
-                if(not is_passable(self.posX - i, self.posY)):
+                if(not board.is_passable(self.posX - i, self.posY)):
                     continue
                 self.posX -= i;
                 break
             direction_string = "left"
         elif(direction == "r"):
             for i in range(2, 0, -1):
-                if(not is_passable(self.posX + i, self.posY)):
+                if(not board.is_passable(self.posX + i, self.posY)):
                     continue
                 self.posX += i;
                 break
             direction_string = "right"
         elif(direction == "u"):
             for i in range(2, 0, -1):
-                if(not is_passable(self.posX, self.posY - i)):
+                if(not board.is_passable(self.posX, self.posY - i)):
                     continue
                 self.posY -= i;
                 break
             direction_string = "up"
         elif(direction == "d"):
             for i in range(2, 0, -1):
-                if(not is_passable(self.posX, self.posY + i)):
+                if(not board.is_passable(self.posX, self.posY + i)):
                     continue
                 self.posY += i;
                 break
@@ -82,19 +81,19 @@ class Player:
         direction_string = "" #Commentary purposes
 
         if(direction == "l"):
-            if(is_passable(self.posX - 1, self.posY)):
+            if(board.is_passable(self.posX - 1, self.posY)):
                 self.posX -= 1;
             direction_string = "left"
         elif(direction == "r"):
-            if(is_passable(self.posX + 1, self.posY)):
+            if(board.is_passable(self.posX + 1, self.posY)):
                 self.posX += 1;
             direction_string = "right"
         elif(direction == "u"):
-            if(is_passable(self.posX, self.posY - 1)):
+            if(board.is_passable(self.posX, self.posY - 1)):
                 self.posY -= 1
             direction_string = "up"
         elif(direction == "d"):
-            if(is_passable(self.posX, self.posY + 1)):
+            if(board.is_passable(self.posX, self.posY + 1)):
                 self.posY += 1;
             direction_string = "down"
         self.last_moved = direction;
@@ -104,24 +103,24 @@ class Player:
         attack_string = "" #Commentary purposes
 
         if(attack == "lw"):
-            attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
-            attack_square(WIDE_DAMAGE, self.posX - 1, self.posY);
-            attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
+            board.attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
+            board.attack_square(WIDE_DAMAGE, self.posX - 1, self.posY);
+            board.attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
             attack_string = "left wide attack"
         elif(attack == "rw"):
-            attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
-            attack_square(WIDE_DAMAGE, self.posX + 1, self.posY);
-            attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
+            board.attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
+            board.attack_square(WIDE_DAMAGE, self.posX + 1, self.posY);
+            board.attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
             attack_string = "right wide attack"
         elif(attack == "uw"):
-            attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
-            attack_square(WIDE_DAMAGE, self.posX, self.posY - 1);
-            attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
+            board.attack_square(WIDE_DAMAGE, self.posX - 1, self.posY - 1);
+            board.attack_square(WIDE_DAMAGE, self.posX, self.posY - 1);
+            board.attack_square(WIDE_DAMAGE, self.posX + 1, self.posY - 1);
             attack_string = "up wide attack"
         elif(attack == "dw"):
-            attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
-            attack_square(WIDE_DAMAGE, self.posX, self.posY + 1);
-            attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
+            board.attack_square(WIDE_DAMAGE, self.posX - 1, self.posY + 1);
+            board.attack_square(WIDE_DAMAGE, self.posX, self.posY + 1);
+            board.attack_square(WIDE_DAMAGE, self.posX + 1, self.posY + 1);
             attack_string = "down wide attack"
 
         return "{0} uses {1}!".format(self.name, attack_string);
@@ -139,51 +138,76 @@ class Obstacle:
         self.posX = posX;
         self.posY = posY;
 
+class Board:
+    def __init__(self, SIZE):
+        self.board = [[None for i in range(SIZE)] for j in range(SIZE)]
+
+    def get_board(self):
+        return self.board;
+
+    def set_square(self, thing, posX, posY):
+        self.board[posY][posX] = thing;
+
+    def get_square(self, posX, posY):
+        return self.board[posY][posX];
+
+    def is_obstacle(self, posX, posY):
+        return isinstance(self.get_square(posX, posY), Obstacle);
+
+    def is_player(self, posX, posY):
+        return isinstance(self.get_square(posX, posY), Player);
+
+    def is_passable(self, posX, posY):
+        if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
+            return False
+        if(self.is_obstacle(posX, posY)):
+            return False
+        return True
+
+    def attack_square(self, damage, posX, posY):
+        if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
+            return
+        target = self.get_square(posX, posY);
+        if(isinstance(target, Player)):
+            target.damage(damage);
+            return
+
+    def generate_obstacles(self):
+        for i in range(NUM_OBSTACLES):
+            random_posX = random.randrange(SIZE);
+            random_posY = random.randrange(SIZE);
+            while(not self.get_square(random_posX, random_posY) is None):
+                #If there is no obstacle or player there already
+                random_posX = random.randrange(SIZE);
+                random_posY = random.randrange(SIZE);
+
+            obstacle = Obstacle(random_posX, random_posY);
+            OBSTACLES.append(obstacle);
+            self.set_square(obstacle, random_posX, random_posY);
+
+    def update_board(self):
+        self.board = [[None for i in range(SIZE)] for j in range(SIZE)]
+        for obstacle in OBSTACLES:
+            self.set_square(obstacle, obstacle.posX, obstacle.posY);
+        for player in PLAYERS:
+            if(self.is_player(player.posX, player.posY)):
+                #Another player is already standing there
+                self.board[player.posY][player.posX] = "**";
+            else:
+                self.board[player.posY][player.posX] = player;
+
+        return board;
+
 SIZE = 7
 MAXHEALTH = 100
 PLAYERS = []
-BOARD = [[]]
 NUM_OBSTACLES = SIZE
 OBSTACLES = []
 
 WIDE_DAMAGE = 15
 
-def generate_obstacles():
-    for i in range(NUM_OBSTACLES):
-        random_posX = random.randrange(SIZE);
-        random_posY = random.randrange(SIZE);
-        while(not BOARD[random_posY][random_posX] is None):
-            #If there is no obstacle or player there already
-            random_posX = random.randrange(SIZE);
-            random_posY = random.randrange(SIZE);
+board = Board(SIZE);
 
-        obstacle = Obstacle(random_posX, random_posY);
-        OBSTACLES.append(obstacle);
-        BOARD[random_posY][random_posX] = obstacle;
-
-def get_board_square(posX, posY):
-    return BOARD[posY][posX];
-
-def is_obstacle(posX, posY):
-    return isinstance(get_board_square(posX, posY), Obstacle);
-
-def is_player(posX, posY):
-    return isinstance(get_board_square(posX, posY), Player);
-
-def is_passable(posX, posY):
-    if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
-        return False
-    if(is_obstacle(posX, posY)):
-        return False
-    return True
-
-def attack_square(damage, posX, posY):
-    if(posX < 0 or posY < 0 or posX >= SIZE or posY >= SIZE):
-        return
-    target = BOARD[posY][posX];
-    if(isinstance(target, Player)):
-        target.damage(damage);
-        return
 
 def draw_health():
     output_string = "";
@@ -199,23 +223,10 @@ def draw_health():
         output_string += "] {0}/100\n".format(health)
     broadcast(output_string)
 
-def update_board():
-    global BOARD
-    BOARD = [[None for i in range(SIZE)] for j in range(SIZE)]
-    for obstacle in OBSTACLES:
-        BOARD[obstacle.posY][obstacle.posX] = obstacle;
-    for player in PLAYERS:
-        if(is_player(player.posX, player.posY)):
-            #Another player is already standing there
-            BOARD[player.posY][player.posX] = "**";
-        else:
-            BOARD[player.posY][player.posX] = player;
 
-    return BOARD;
-
-def draw_game_state():
+def draw_game_state(board):
     output_string = ""
-    for i in BOARD:
+    for i in board.get_board():
         output_string += ("-" * (5*SIZE + 1)) + "\n"
         output_string += "|"
         for j in i:
@@ -261,8 +272,8 @@ def is_attack(string):
 
 
 def start_game(usernames):
-    global BOARD
-    BOARD = [["  " for i in range(SIZE)] for j in range(SIZE)]
+    global board;
+    board = Board(SIZE);
 
     #Initialize player
     player1 = Player(usernames[0][:2].upper(), 100, 0, SIZE//2);
@@ -271,13 +282,14 @@ def start_game(usernames):
     PLAYERS.append(player1)
     PLAYERS.append(player2)
 
-    update_board();
-    generate_obstacles();
-    draw_game_state(); 
+    board.update_board();
+    board.generate_obstacles();
+    draw_game_state(board); 
 
     turn = 1
+    subturn = 1;
     while(not player1.is_dead() and not player2.is_dead()): 
-        actions_list = get_all_player_inputs("Input actions: ", action_constraint); #TODO: Split into two different lists and handle turn order and stuff
+        actions_list = get_all_player_inputs("Input actions: ", action_constraint); #Get player inputs, with the constraints of them being an action.
         actions_list_by_turn = list(zip(actions_list[0].split(" "), actions_list[1].split(" ")))
         print(actions_list_by_turn);
 
@@ -286,27 +298,29 @@ def start_game(usernames):
             print(actions_list_by_turn)
             if(is_attack(i[1])):
                 #If player 2 is attacking, player 1 always goes first (even if player1 is attacking. It makes no difference in this case.)
-                output_string += player1.action(i[0]) + "\n";
-                output_string += player2.action(i[1]) + "\n";
+                output_string += player1.action(i[0]) + "\n"; board.update_board();
+                output_string += player2.action(i[1]) + "\n"; board.update_board();
             elif(is_attack(i[0])):
                 #Likewise, if player 1 is attacking, player 2 goes first.
-                output_string += player2.action(i[1]) + "\n";
-                output_string += player1.action(i[0]) + "\n";
+                output_string += player2.action(i[1]) + "\n"; board.update_board();
+                output_string += player1.action(i[0]) + "\n"; board.update_board();
             else:
                 #Otherwise 1 then 2.
-                output_string += player1.action(i[0]) + "\n";
-                output_string += player2.action(i[1]) + "\n";
+                output_string += player1.action(i[0]) + "\n"; board.update_board();
+                output_string += player2.action(i[1]) + "\n"; board.update_board();
 
-            broadcast(("=" * 45) + "\n" + (" " * 19) + "TURN {0}".format(turn) + (" " * 19) + "\n" + ("=" * 45))
-            update_board()
-            draw_game_state();
+            broadcast(("=" * 45) + "\n" + (" " * 19) + "TURN {0}-{1}".format(turn, subturn) + (" " * 19) + "\n" + ("=" * 45))
+            board.update_board()
+            draw_game_state(board);
 
             broadcast(output_string);
             broadcast("\n")
 
             time.sleep(1)
 
-            turn += 1;
+            subturn += 1;
+
+        turn += 1; subturn = 1;
 
         if(player1.is_dead() and player2.is_dead()):
             broadcast("Draw!")
