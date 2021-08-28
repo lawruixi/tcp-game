@@ -2,6 +2,7 @@
 
 import time
 import random
+import sys
 
 def intro():
     print("=============================================================")
@@ -52,27 +53,28 @@ class Player:
                 if(not is_passable(self.posX - i, self.posY)):
                     continue
                 self.posX -= i;
+                break
             direction_string = "left"
         elif(direction == "r"):
             for i in range(2, 0, -1):
-                #find the furthest possible square that is dashable to.
                 if(not is_passable(self.posX + i, self.posY)):
                     continue
                 self.posX += i;
+                break
             direction_string = "right"
         elif(direction == "u"):
             for i in range(2, 0, -1):
-                #find the furthest possible square that is dashable to.
                 if(not is_passable(self.posX, self.posY - i)):
                     continue
                 self.posY -= i;
+                break
             direction_string = "up"
         elif(direction == "d"):
             for i in range(2, 0, -1):
-                #find the furthest possible square that is dashable to.
                 if(not is_passable(self.posX, self.posY + i)):
                     continue
                 self.posY += i;
+                break
             direction_string = "down"
         return "{0} dashes {1}!".format(self.name, direction_string);
 
@@ -308,10 +310,22 @@ def start_game(usernames):
 
         if(player1.is_dead() and player2.is_dead()):
             broadcast("Draw!")
+            end_game();
         elif(player1.is_dead()):
             broadcast("{0} Wins!".format(player2.name))
+            end_game();
         elif(player2.is_dead()):
             broadcast("{0} Wins!".format(player1.name))
+            end_game();
+
+
+def end_game():
+    #Broadcast to all clients to disconnect.
+    broadcast("!TERMINATE")
+    for client in CLIENTS:
+        remove_connection(client);
+    print("Game has ended.")
+    sys.exit(0);
 
 #Networking stuff goes here
 import socket

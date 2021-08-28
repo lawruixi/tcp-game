@@ -3,6 +3,7 @@
 # Python program to implement client side 
 import socket
 import sys
+import os
 import threading
 
 def valid_ip(address):
@@ -64,7 +65,7 @@ if(option == "2"):
         
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     HOST = host
-    PORT = port
+    PORT = int(port)
     server.connect((HOST, PORT))
      
     print("Successfully connected! \n")
@@ -78,11 +79,11 @@ if(option == "2"):
     def recv_msg():
         while True:
             message = server.recv(2048)
-            if(message != b""):
-                print(message.decode("utf-8"))
             if(message == b"!TERMINATE"):
                 print("Disconnected from server.")
-                sys.exit(0)
+                os._exit(0)
+            elif(message != b""):
+                print(message.decode("utf-8"))
 
     threading.Thread(target=send_msg).start()  
     threading.Thread(target=recv_msg).start()
