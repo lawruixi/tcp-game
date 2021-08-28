@@ -170,6 +170,7 @@ class Board:
         target = self.get_square(posX, posY);
         if(isinstance(target, Player)):
             target.damage(damage);
+            broadcast("{0} took {1} damage!".format(target.name, damage))
             return
 
     def generate_obstacles(self):
@@ -225,7 +226,7 @@ def draw_health():
 
 
 def draw_game_state(board):
-    output_string = ""
+    output_string = "\n"
     for i in board.get_board():
         output_string += ("-" * (5*SIZE + 1)) + "\n"
         output_string += "|"
@@ -289,7 +290,8 @@ def start_game(usernames):
     turn = 1
     subturn = 1;
     while(not player1.is_dead() and not player2.is_dead()): 
-        actions_list = get_all_player_inputs("Input actions: ", action_constraint); #Get player inputs, with the constraints of them being an action.
+        broadcast("\n");
+        actions_list = get_all_player_inputs("Input actions: \n", action_constraint); #Get player inputs, with the constraints of them being an action.
         actions_list_by_turn = list(zip(actions_list[0].split(" "), actions_list[1].split(" ")))
         print(actions_list_by_turn);
 
@@ -309,12 +311,13 @@ def start_game(usernames):
                 output_string += player1.action(i[0]) + "\n"; board.update_board();
                 output_string += player2.action(i[1]) + "\n"; board.update_board();
 
+            broadcast("\n");
             broadcast(("=" * 45) + "\n" + (" " * 19) + "TURN {0}-{1}".format(turn, subturn) + (" " * 19) + "\n" + ("=" * 45))
+            broadcast("\n");
             board.update_board()
             draw_game_state(board);
 
             broadcast(output_string);
-            broadcast("\n")
 
             time.sleep(1)
 
@@ -351,39 +354,44 @@ def get_input(client, constraint = None):
     conn, addr = client;
     #Gets input from a specific connection and address.
     try:
+        send("%> ", client[0]);
         message = conn.recv(2048);
         message_str = message.decode("utf-8")
         if message:
             if(constraint):
-                while(constraint(message_str) == False):
-                    send("Invalid input.\n", client[0]);
+                result = constraint(message_str) #result is a tuple of (is valid, error message if any)
+                while(result[0] == False):
+                    send(result[1], client[0]);
+                    send("%> ", client[0])
 
                     message = conn.recv(2048);
                     message_str = message.decode("utf-8")
+                    result = constraint(message_str);
             print("<" + addr[0] + ">: {0}".format(message_str));
             return message_str;
     except Exception as e:
         print(e)
 
 def action_constraint(string):
+    #Returns a tuple of (is_valid, error message if any)
     actions_list = string.strip().split(" ")
     print(actions_list)
 
     if(len(actions_list) != 3):
-        return False
+        return (False, "Please input three actions.\n")
 
     for i in actions_list:
         if(not is_action(i)):
-            return False
+            return (False, "Invalid action.\n")
 
     #1 attack per round
     numAttacks = 0
     for i in actions_list:
         if(is_attack(i)):
             numAttacks += 1
-    if(numAttacks > 1): return False
+    if(numAttacks > 1): return (False, "Only one attack per turn allowed.\n")
 
-    return True
+    return (True, None);
 
 def get_all_player_inputs(message, constraint = None):
     #Sends a message, then tries to get all player inputs, blocking until it does.
@@ -461,7 +469,11 @@ def start_server():
         print(addr[0] + " connected")
         numClients += 1;
 
-    usernames = get_all_player_inputs("Enter username: ")
+    usernames = get_all_player_inputs("Enter username: \n")
+
+    for i in range(len(CLIENTS)):
+        send("Welcome, {0}!\n".format(usernames[i]), CLIENTS[i])
+
     start_game(usernames);
 
 # start_game()

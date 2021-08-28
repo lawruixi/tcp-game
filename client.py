@@ -73,9 +73,9 @@ if(option == "2"):
         while True:
             message = sys.stdin.readline()
             server.send(message.encode("utf-8"))
-            sys.stdout.write("<You> ")
-            sys.stdout.write(message)
-            sys.stdout.flush()
+            # sys.stdout.write("<You> ")
+            # sys.stdout.write(message)
+            # sys.stdout.flush()
     def recv_msg():
         while True:
             message = server.recv(2048)
@@ -83,7 +83,8 @@ if(option == "2"):
                 print("Disconnected from server.")
                 os._exit(0)
             elif(message != b""):
-                print(message.decode("utf-8"))
+                print(message.decode("utf-8"), end='')
+                sys.stdout.flush();
 
     threading.Thread(target=send_msg).start()  
     threading.Thread(target=recv_msg).start()
